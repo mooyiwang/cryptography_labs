@@ -79,6 +79,9 @@ unsigned int Rcon[10] = { 0x01000000, 0x02000000,
                  0x1b000000, 0x36000000
                };
 
+//CBC初始向量
+char IV[16] = "abcdefghijklmnop";
+
 /**
  * 获取整型数据的低8位的左4个位
  */
@@ -493,36 +496,11 @@ void printW()
     printf("\n");
 }
 
-/**
- *每一个分组的加密,必须为16的倍数
- *参数 p: 明文的字符串数组。
- * 参数 plen: 明文的长度。
- * 参数 key: 密钥的字符串数组。
- */
-void aes(char *p, int plen, char *key)
-{
-
-    int keylen = strlen(key);
+void AES(char *p){
+    
     int pArray[4][4];
-    int k,i;
-
-    if(plen == 0 || plen % 16 != 0)
-    {
-        printf("明文字符长度必须为16的倍数！\n");
-        exit(0);
-    }
-
-    if(!checkKeyLen(keylen))
-    {
-        printf("密钥字符长度错误！长度必须为16。当前长度为%d\n",keylen);
-        exit(0);
-    }
-
-    extendKey(key);//扩展密钥
-    printW();
-    for(k = 0; k < plen; k += 16)
-    {
-        convertToIntArray(p + k, pArray);
+    int i; 
+    convertToIntArray(p, pArray);
 
         addRoundKey(pArray, 0);//一开始的轮密钥加
 
@@ -545,39 +523,73 @@ void aes(char *p, int plen, char *key)
 
         addRoundKey(pArray, 10);
 
-        convertArrayToStr(pArray, p + k);
+        convertArrayToStr(pArray, p);
+}
+
+//添加向量
+void addVector(char *p, char *v){
+    int pArray[4][4], vArray[4][4];
+    int i,j;
+    convertToIntArray(p, pArray);
+    convertToIntArray(v, vArray);
+    for(i=0; i<4; i++){
+        for(j=0; j<4; j++){
+            pArray[j][i] = pArray[j][i] ^ vArray[j][i];
+        }
     }
+    convertArrayToStr(pArray, p);
+
 }
 
 /**
- * 参数 c: 密文的字符串数组。
- * 参数 clen: 密文的长度。
+ *每一个分组的加密,必须为16的倍数
+ *参数 p: 明文的字符串数组。
+ * 参数 plen: 明文的长度。
  * 参数 key: 密钥的字符串数组。
  */
-void deAes(char *c, int clen, char *key)
+void aes(char *p, int plen, char *key)
 {
 
-    int cArray[4][4];
-    int keylen,k,i;
-    keylen = strlen(key);
-    if(clen == 0 || clen % 16 != 0)
+    int keylen = strlen(key);
+    int pArray[4][4];
+    int k,i;
+    char *vector = IV;
+
+    if(plen == 0 || plen % 16 != 0)
     {
-        printf("密文字符长度必须为16的倍数！现在的长度为%d\n",clen);
+        printf("明文字符长度必须为16的倍数！\n");
         exit(0);
     }
 
     if(!checkKeyLen(keylen))
     {
-        printf("密钥字符长度错误！长度必须为16、24和32。当前长度为%d\n",keylen);
+        printf("密钥字符长度错误！长度必须为16。当前长度为%d\n",keylen);
         exit(0);
     }
 
-    //请补充代码
     extendKey(key);//扩展密钥
     printW();
-    for(k = 0; k < clen; k += 16)
-    {
-        convertToIntArray(c + k, cArray);
+
+    if(plen == 16){
+        // addVector(p, vector);
+        AES(p);
+    }
+    else{
+        for(k = 0; k < plen; k += 16){
+            addVector(p+k, vector);
+            AES(p+k);
+            vector = p+k;
+        } 
+    }
+
+
+}
+
+void deAES(char *c){
+
+    int cArray[4][4];
+    int i;
+    convertToIntArray(c, cArray);
 
         addRoundKey(cArray, 10);//一开始的轮密钥加
 
@@ -599,7 +611,65 @@ void deAes(char *c, int clen, char *key)
 
         addRoundKey(cArray, 0);
 
-        convertArrayToStr(cArray, c + k);
+        convertArrayToStr(cArray, c);
+}
+
+void copyVector(char *c, char *out){
+
+    for(int i=0; i<16; i++){
+        *out++ = *c++;
+    }
+
+}
+/**
+ * 参数 c: 密文的字符串数组。
+ * 参数 clen: 密文的长度。
+ * 参数 key: 密钥的字符串数组。
+ */
+void deAes(char *c, int clen, char *key)
+{
+
+    int cArray[4][4];
+    int keylen,k,i;
+    keylen = strlen(key);
+
+    char *vector = IV;
+    char formerCiper[16], formerCiper2[16];
+
+    if(clen == 0 || clen % 16 != 0)
+    {
+        printf("密文字符长度必须为16的倍数！现在的长度为%d\n",clen);
+        exit(0);
+    }
+
+    if(!checkKeyLen(keylen))
+    {
+        printf("密钥字符长度错误！长度必须为16、24和32。当前长度为%d\n",keylen);
+        exit(0);
+    }
+
+    //请补充代码
+    extendKey(key);//扩展密钥
+    printW();
+
+    if(clen == 16){
+        deAES(c);
+        // addVector(c, vector);
+    }
+    else{
+        for(k = 0; k < clen; k += 16){
+            if(k == 0){
+                copyVector(c+k, formerCiper);
+                deAES(c+k);
+                addVector(c+k, vector);
+            }
+            else{
+                copyVector(c+k, formerCiper2);
+                deAES(c+k);
+                addVector(c+k, formerCiper);
+                copyVector(formerCiper2, formerCiper);
+            }
+        } 
     }
 }
 /**
