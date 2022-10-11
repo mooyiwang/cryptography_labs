@@ -1,0 +1,5 @@
+参考如下两个链接
+
+https://blog.csdn.net/u012629110/article/details/51220727
+
+(56条消息) 开源大数库gmp在codeblocks上的环境配置方法_stray birds的博客-CSDN博客
