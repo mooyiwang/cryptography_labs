@@ -47,6 +47,7 @@ def miller_rabin(n):
             return False
     return True
 
+
 class RSA:
 
     def __init__(self):
@@ -193,6 +194,3 @@ if __name__ == '__main__':
         if input('是否进行解密, 1-解密 0-退出:') == '1':
             rsa.decrypt()
     print('演示结束')
-
-
-
