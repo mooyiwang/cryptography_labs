@@ -82,14 +82,17 @@ def get_pri_root(n):
     获得n的本原根(n为素数）
     :return: n的本原根
     '''
-    while True:
+    find = False
+    while not find:
         r = random.randint(1, n-1)
         if fast_exp_mod(r, n-1, n) == 1:
+            find = True
             for i in range(1, n-1):
                 if fast_exp_mod(r, i, n) == 1:
+                    find = False
                     break
-                else:
-                    return r
+    return r
+
 
 
 def miller_rabin(n):
@@ -108,12 +111,12 @@ def miller_rabin(n):
 
 class ElGamal:
     def __init__(self):
-        self.p = None
-        self.g = None
-        self.pr_x = None
-        self.pu_y = None
-        self.k = None
-        self.singed = None
+        self.p = None  #大素数
+        self.g = None  #p的本原根
+        self.x = None  #私钥
+        self.y = None  #公钥y
+        self.k = None  #秘密随机数
+        self.singed = None #签名结果
         pass
 
     def gen_key(self):
@@ -122,10 +125,10 @@ class ElGamal:
             if miller_rabin(self.p):
                 break
         self.g = get_pri_root(self.p)
-        self.pr_x = random.randint(2, self.p-2)
-        self.pu_y = fast_exp_mod(self.g, self.pr_x, self.p)
+        self.x = random.randint(2, self.p - 2)
+        self.y = fast_exp_mod(self.g, self.x, self.p)
         # print(self.p, self.g, self.pr_x, self.pu_y)
-        print(f"公钥(p, g, y):{self.p},{self.g},{self.pu_y}. 私钥(x):{self.pr_x}")
+        print(f"公钥(p, g, y):{self.p},{self.g},{self.y}. 私钥(x):{self.x}")
         pass
 
     def sign(self, massage):
@@ -135,15 +138,15 @@ class ElGamal:
                 break
         r = fast_exp_mod(self.g, self.k, self.p)
         k_inverse = euclid_exd(self.k, self.p-1)
-        s = (k_inverse * (massage - self.pr_x * r)) % (self.p-1)
+        s = (k_inverse * (massage - self.x * r)) % (self.p - 1)
         self.singed = (r, s)
-        print(f"公钥(p, g, y):{self.p},{self.g},{self.pu_y}. 私钥x:{self.pr_x}. 秘密随机数k:{self.k}")
+        print(f"公钥(p, g, y):{self.p},{self.g},{self.y}. 私钥x:{self.x}. 秘密随机数k:{self.k}")
         print(f"签名信息(r, s):{self.singed}")
         pass
 
     def verify(self, massage):
         r, s = self.singed
-        a = (fast_exp_mod(self.pu_y, r, self.p) * fast_exp_mod(r, s, self.p)) % self.p
+        a = (fast_exp_mod(self.y, r, self.p) * fast_exp_mod(r, s, self.p)) % self.p
         b = fast_exp_mod(self.g, massage, self.p)
         if a == b:
             print(f"y^r*r^s mod p = {a}, g^m mod p = {b}")
@@ -167,9 +170,9 @@ if __name__ == "__main__":
         elgamal.sign(massage)
         if input("是否让Bob进行验证? 1-开始 0-退出:") == '1':
             if elgamal.verify(massage):
-                print("***验证通过:)***")
+                print("      验证通过:)      ")
             else:
-                print("***验证失败:(***")
+                print("      验证失败:(      ")
     if input("是否进行消息篡改实验? 1-开始 0-退出:") == '1':
         print("->【消息篡改】")
         new_massage = modify(massage)
@@ -179,9 +182,9 @@ if __name__ == "__main__":
         print(f"原消息：{massage}, 篡改后：{new_massage}")
         print("--->Bob验证篡改后的消息")
         if elgamal.verify(new_massage):
-            print("***验证通过:)***")
+            print("     验证通过:)      ")
         else:
-            print("***验证失败:(***")
+            print("     验证失败:(      ")
     print("演示结束")
 
 
